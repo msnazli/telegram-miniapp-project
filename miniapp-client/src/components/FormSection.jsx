@@ -2,20 +2,24 @@
 import React, { useState } from 'react';
 import { submitForm } from '../api';
 import { useTranslation } from 'react-i18next';
-
-const { t, i18n } = useTranslation();
+import '../i18n';
 
 const lang = navigator.language.startsWith('fa') || navigator.language.startsWith('ar') ? 'rtl' : 'ltr';
 const [language, setLanguage] = useState('fa'); // یا 'en'
 
 const FormSection = () => {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    keywords: '',
-    features: [],
-    styles: [],
-  });
+   const { t, i18n } = useTranslation();
+
+ const [formData, setFormData] = useState({
+  title: '',
+  description: '',
+  keywords: '',
+  features: '',
+  styles: '',
+});
+
+  const [generatedText, setGeneratedText] = useState('');
+  const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -23,7 +27,24 @@ const FormSection = () => {
   const styleOptions = ['رسمی', 'صمیمی', 'خلاقانه'];
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+  
+
+     const data = await response.json();
+    if (data.success) {
+      setGeneratedText(data.generatedText);
+      setMessage(t('formSubmittedSuccessfully'));
+    }
+  };
+
+  const switchLanguage = () => {
+    const newLang = i18n.language === 'fa' ? 'en' : 'fa';
+    i18n.changeLanguage(newLang);
   };
 
   const handleCheckboxChange = (name, type) => {
@@ -45,30 +66,19 @@ const handleCopy = () => {
 
 
 const [preview, setPreview] = useState(null);
-const [generatedText, setGeneratedText] = useState('');
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      setError('');
-      setMessage('');
-      setGeneratedText('');
-
-      const payload = {
+    const response = await fetch('http://localhost:5000/api/openai/generate',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         ...formData,
-        keywords: formData.keywords.split(',').map((k) => k.trim()),
-      };
-      const result = await submitForm(payload);
-
-       if (result.success) {
-      setMessage('متن با موفقیت تولید شد!');
-      setGeneratedText(result.generatedText);
-    } else {
-      setError('پاسخی از مدل دریافت نشد.');
-    }
-  } catch (err) {
-    setError('خطا در ارسال فرم');
-  }
-};
+        keywords: formData.keywords.split(','),
+        features: formData.features.split(','),
+        styles: formData.styles.split(','),
+      }),
+    });
 
   return (
     <div className="container mt-5" dir={lang}>
@@ -139,22 +149,14 @@ const [generatedText, setGeneratedText] = useState('');
   );
 };
 
-{copySuccess && (
-  <div style={{
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    backgroundColor: '#d1e7dd',
-    color: '#0f5132',
-    padding: '10px 20px',
-    borderRadius: '5px',
-    boxShadow: '0 0 10px rgba(0,0,0,0.2)',
-    zIndex: 1000,
-    direction: language === 'fa' ? 'rtl' : 'ltr',
-  }}>
-    {language === 'fa' ? '✅ متن کپی شد' : '✅ Text copied'}
-  </div>
-)}
+ {generatedText && (
+        <div className="preview">
+          <h3>{t('previewTitle')}</h3>
+          <p>{generatedText}</p>
+          <button onClick={handleCopy}>{t('copyButton')}</button>
+          {copied && <div className="copied-msg">{t('copied')}</div>}
+        </div>
+  )}
 
 
 export default FormSection;

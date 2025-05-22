@@ -1,11 +1,15 @@
 {
-  "title": "عنوان صفحه",
+  "formTitle": "تولید متن هوش مصنوعی",
   "submit": "ارسال",
-  "copy": "کپی متن",
+  "copyButton": "کپی متن",
   "copied": "متن کپی شد!",
-  "form": {
-    "description": "توضیحات",
-    "keywords": "کلمات کلیدی",
-    "features": "ویژگی‌ها"
+  "previewTitle": "پیش‌نمایش متن تولید شده",
+  "placeholders": {
+    "title": "عنوان",
+    "description": "توضیح",
+    "keywords": "کلمات کلیدی (با کاما جدا شوند)",
+    "features": "ویژگی‌ها (با کاما جدا شوند)",
+    "styles": "سبک‌ها (با کاما جدا شوند)"
   }
 }
+

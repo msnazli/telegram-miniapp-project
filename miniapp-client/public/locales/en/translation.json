@@ -1,11 +1,14 @@
 {
-  "title": "Page Title",
+  "formTitle": "AI Text Generator",
   "submit": "Submit",
-  "copy": "Copy Text",
+  "copyButton": "Copy Text",
   "copied": "Text copied!",
-  "form": {
+  "previewTitle": "Generated Text Preview",
+  "placeholders": {
+    "title": "Title",
     "description": "Description",
-    "keywords": "Keywords",
-    "features": "Features"
+    "keywords": "Keywords (comma-separated)",
+    "features": "Features (comma-separated)",
+    "styles": "Styles (comma-separated)"
   }
 }

@@ -1,0 +1,112 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const AdminPage = () => {
+  const [language, setLanguage] = useState('fa');
+  const [translations, setTranslations] = useState([]);
+  const [newKey, setNewKey] = useState('');
+  const [newValue, setNewValue] = useState('');
+
+  const fetchTranslations = async () => {
+    const res = await axios.get('http://localhost:5000/api/translations');
+    setTranslations(res.data);
+  };
+
+  useEffect(() => {
+    fetchTranslations();
+  }, []);
+
+  const handleAdd = async () => {
+    if (!newKey || !newValue) return;
+    await axios.post('http://localhost:5000/api/translations', {
+      key: newKey,
+      value: newValue,
+    });
+    setNewKey('');
+    setNewValue('');
+    fetchTranslations();
+  };
+
+  const handleUpdate = async (id, key, value) => {
+    await axios.put(`http://localhost:5000/api/translations/${id}`, { key, value });
+    fetchTranslations();
+  };
+
+  const handleDelete = async (id) => {
+    await axios.delete(`http://localhost:5000/api/translations/${id}`);
+    fetchTranslations();
+  };
+
+  const handleSave = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/translations/${language}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(translations),
+      });
+      if (res.ok) alert('✅ ذخیره شد');
+    } catch (err) {
+      console.error('Save error', err);
+    }
+  };
+
+  return (
+    <div className="container mt-5">
+      <h2 className="mb-4">مدیریت ترجمه‌ها</h2>
+
+      <div className="mb-3 d-flex gap-2">
+        <input
+          className="form-control"
+          placeholder="کلید"
+          value={newKey}
+          onChange={(e) => setNewKey(e.target.value)}
+        />
+        <input
+          className="form-control"
+          placeholder="مقدار فارسی یا انگلیسی"
+          value={newValue}
+          onChange={(e) => setNewValue(e.target.value)}
+        />
+        <button className="btn btn-success" onClick={handleAdd}>افزودن</button>
+      </div>
+
+      <table className="table">
+        <thead>
+          <tr>
+            <th>کلید</th>
+            <th>مقدار</th>
+            <th>عملیات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {translations.map(({ _id, key, value }) => (
+            <tr key={_id}>
+              <td>
+                <input
+                  className="form-control"
+                  defaultValue={key}
+                  onBlur={(e) => handleUpdate(_id, e.target.value, value)}
+                />
+              </td>
+              <td>
+                <input
+                  className="form-control"
+                  defaultValue={value}
+                  onBlur={(e) => handleUpdate(_id, key, e.target.value)}
+                />
+              </td>
+              <td>
+                <button className="btn btn-danger" onClick={() => handleDelete(_id)}>حذف</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <button onClick={handleSave}>ذخیره ترجمه‌ها</button>
+      
+    </div>
+  );
+};
+
+export default AdminPage;
