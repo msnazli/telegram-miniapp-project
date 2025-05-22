@@ -1,0 +1,11 @@
+{
+  "title": "Page Title",
+  "submit": "Submit",
+  "copy": "Copy Text",
+  "copied": "Text copied!",
+  "form": {
+    "description": "Description",
+    "keywords": "Keywords",
+    "features": "Features"
+  }
+}
