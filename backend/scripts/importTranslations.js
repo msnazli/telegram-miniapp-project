@@ -1,42 +1,53 @@
-// scripts/importTranslations.js
-const mongoose = require('mongoose');
+// scripts/exportTranslations.js
+
 const fs = require('fs');
 const path = require('path');
+const mongoose = require('mongoose');
 const Translation = require('../models/Translation');
-const connectDB = require('../db');
+require('dotenv').config();
 
-const importTranslations = async () => {
+const EXPORT_DIR = path.join(__dirname, '../miniapp-client/public/translation');
+
+async function exportTranslations() {
   try {
-    await connectDB();
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('✅ MongoDB connected');
 
-    const localesPath = path.join(__dirname, '../../frontend/public/locales');
-    const languages = fs.readdirSync(localesPath);
+    const translations = await Translation.find({});
 
-    const allTranslations = {}; // { key1: { en: "..", fa: ".." } }
-
-    for (const lang of languages) {
-      const filePath = path.join(localesPath, lang, 'translation.json');
-      if (!fs.existsSync(filePath)) continue;
-
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      for (const key in data) {
-        if (!allTranslations[key]) allTranslations[key] = {};
-        allTranslations[key][lang] = data[key];
-      }
+    if (!fs.existsSync(EXPORT_DIR)) {
+      fs.mkdirSync(EXPORT_DIR, { recursive: true });
     }
 
-    // تبدیل ساختار به مدل جدید
-    const documents = Object.entries(allTranslations).map(([key, translations]) => ({ key, translations }));
+    translations.forEach(({ key, ...langs }) => {
+      Object.keys(langs._doc).forEach((lang) => {
+        if (lang === 'key' || lang === '_id' || lang === '__v') return;
 
-    await Translation.deleteMany({});
-    await Translation.insertMany(documents);
+        const langFilePath = path.join(EXPORT_DIR, `${lang}.json`);
 
-    console.log('✅ Import successful');
+        let fileContent = {};
+        if (fs.existsSync(langFilePath)) {
+          try {
+            fileContent = JSON.parse(fs.readFileSync(langFilePath, 'utf8'));
+          } catch (err) {
+            console.warn(`⚠️ Could not read or parse ${lang}.json. Creating new.`);
+          }
+        }
+
+        fileContent[key] = langs[lang];
+        fs.writeFileSync(langFilePath, JSON.stringify(fileContent, null, 2));
+      });
+    });
+
+    console.log('✅ Export completed!');
     process.exit();
   } catch (err) {
-    console.error('❌ Import error:', err);
+    console.error('❌ Export error:', err);
     process.exit(1);
   }
-};
+}
 
-importTranslations();
+exportTranslations();
