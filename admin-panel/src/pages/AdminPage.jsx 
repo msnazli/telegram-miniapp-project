@@ -1,33 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const AdminPage = () => {
   const [languages, setLanguages] = useState([]);
   const [newLang, setNewLang] = useState('');
   const [selectedLang, setSelectedLang] = useState('');
   const [translations, setTranslations] = useState({});
-  const [newKey, setNewKey] = useState('');
-  const [newValue, setNewValue] = useState('');
   const [isAddingLang, setIsAddingLang] = useState(false);
 
-  // Load available languages
   useEffect(() => {
     fetch('/api/translations/languages')
       .then(res => res.json())
       .then(data => setLanguages(data))
-      .catch(err => console.error('Error loading languages', err));
+      .catch(console.error);
   }, []);
 
-  // Load translations when a language is selected
   useEffect(() => {
     if (selectedLang) {
       fetch(`/api/translations/${selectedLang}`)
         .then(res => res.json())
         .then(data => setTranslations(data.values || {}))
-        .catch(err => console.error('Error loading translations', err));
+        .catch(console.error);
     }
   }, [selectedLang]);
 
-  // Add new language
+  // افزودن زبان جدید
   const handleAddLanguage = async () => {
     if (!newLang.trim()) return;
     try {
@@ -36,169 +32,135 @@ const AdminPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language: newLang }),
       });
-
       if (res.ok) {
         alert('زبان با موفقیت اضافه شد');
-        setLanguages([...languages, newLang]);
+        setLanguages(prev => [...prev, newLang]);
         setNewLang('');
         setIsAddingLang(false);
       } else {
         const err = await res.json();
         alert(`خطا: ${err.error}`);
       }
-    } catch (err) {
-      console.error('Add language error:', err);
+    } catch {
       alert('خطا در افزودن زبان');
     }
   };
 
-  const handleChangeTranslation = (key, value) => {
-    setTranslations(prev => ({ ...prev, [key]: value }));
+  // تغییر ترجمه‌ها (ساختار آبجکت)
+  const handleChange = (path, value) => {
+    const keys = path.split('.');
+    setTranslations(prev => {
+      const newTrans = { ...prev };
+      let obj = newTrans;
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (!obj[keys[i]]) obj[keys[i]] = {};
+        obj = obj[keys[i]];
+      }
+      obj[keys[keys.length - 1]] = value;
+      return newTrans;
+    });
   };
 
-  const handleDeleteTranslation = (key) => {
-    const updated = { ...translations };
-    delete updated[key];
-    setTranslations(updated);
+  // ساخت فرم‌ها به صورت بازگشتی (برای نمایش کلیدهای دسته‌بندی شده)
+  const renderInputs = (obj, parentKey = '') => {
+    return Object.entries(obj).map(([key, value]) => {
+      const fullKey = parentKey ? `${parentKey}.${key}` : key;
+      if (typeof value === 'object' && value !== null) {
+        return (
+          <fieldset key={fullKey} style={{border:'1px solid #ccc', padding:'10px', margin:'10px 0'}}>
+            <legend>{key}</legend>
+            {renderInputs(value, fullKey)}
+          </fieldset>
+        );
+      }
+      return (
+        <div key={fullKey} style={{marginBottom:'10px'}}>
+          <label>{fullKey}</label>
+          <input
+            style={{width:'100%'}}
+            value={value}
+            onChange={(e) => handleChange(fullKey, e.target.value)}
+          />
+        </div>
+      );
+    });
   };
 
-  const handleAddKey = () => {
-    if (!newKey.trim()) return;
-    setTranslations(prev => ({ ...prev, [newKey]: newValue }));
-    setNewKey('');
-    setNewValue('');
-  };
-
-  const handleSaveTranslations = async () => {
+  // ذخیره ترجمه‌ها
+  const handleSave = async () => {
     try {
       const res = await fetch(`/api/translations/${selectedLang}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(translations),
       });
-      if (res.ok) {
-        alert('✅ ترجمه‌ها ذخیره شدند');
-      } else {
-        alert('❌ خطا در ذخیره ترجمه‌ها');
-      }
-    } catch (err) {
-      console.error('Error saving translations:', err);
+      if (res.ok) alert('ذخیره شد');
+      else alert('خطا در ذخیره');
+    } catch {
+      alert('خطا در ذخیره');
+    }
+  };
+
+  // اکسپورت ترجمه‌ها به فایل
+  const handleExport = async () => {
+    if (!selectedLang) return alert('ابتدا زبان را انتخاب کنید');
+    try {
+      const res = await fetch(`/api/translations/export/${selectedLang}`);
+      const data = await res.json();
+      if (res.ok) alert(data.message);
+      else alert('خطا در اکسپورت');
+    } catch {
+      alert('خطا در اکسپورت');
     }
   };
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <h2 className="text-xl font-bold mb-4">مدیریت ترجمه‌ها</h2>
+    <div style={{ maxWidth: 800, margin: 'auto', padding: 20 }}>
+      <h2>مدیریت ترجمه‌ها</h2>
 
-      {/* Language Selector */}
-      <div className="mb-4">
-        <label>زبان‌ها:</label>
+      {/* انتخاب زبان */}
+      <div style={{ marginBottom: 10 }}>
+        <label>انتخاب زبان:</label>
         <select
-          className="ml-2 border px-2 py-1"
           value={selectedLang}
-          onChange={(e) => setSelectedLang(e.target.value)}
+          onChange={e => setSelectedLang(e.target.value)}
+          style={{ marginLeft: 10 }}
         >
           <option value="">انتخاب زبان</option>
-          {languages.map((lang) => (
-            <option key={lang} value={lang}>{lang}</option>
+          {languages.map(l => (
+            <option key={l} value={l}>{l}</option>
           ))}
         </select>
       </div>
 
-      {/* Add Language */}
-      <div className="mb-4">
-        <button
-          className="bg-blue-600 text-white px-3 py-1 rounded"
-          onClick={() => setIsAddingLang(true)}
-        >
-          ➕ افزودن زبان جدید
-        </button>
-
-        {isAddingLang && (
-          <div className="mt-2 flex gap-2">
+      {/* افزودن زبان */}
+      <div style={{ marginBottom: 10 }}>
+        {isAddingLang ? (
+          <>
             <input
-              type="text"
-              className="border px-2 py-1"
-              placeholder="کد زبان مثل: en, fa, de"
+              placeholder="کد زبان مثل en, fa"
               value={newLang}
-              onChange={(e) => setNewLang(e.target.value)}
+              onChange={e => setNewLang(e.target.value)}
             />
-            <button
-              className="bg-green-600 text-white px-3 py-1 rounded"
-              onClick={handleAddLanguage}
-            >
-              ذخیره
-            </button>
-            <button
-              className="bg-gray-300 text-black px-3 py-1 rounded"
-              onClick={() => { setIsAddingLang(false); setNewLang(''); }}
-            >
-              لغو
-            </button>
-          </div>
+            <button onClick={handleAddLanguage}>ذخیره</button>
+            <button onClick={() => { setIsAddingLang(false); setNewLang(''); }}>لغو</button>
+          </>
+        ) : (
+          <button onClick={() => setIsAddingLang(true)}>➕ افزودن زبان جدید</button>
         )}
       </div>
 
-      {/* Translation Editor */}
+      {/* فرم ویرایش ترجمه‌ها */}
       {selectedLang ? (
-        <div className="border rounded p-4">
-          <h4 className="font-semibold mb-2">کلیدها ({Object.keys(translations).length})</h4>
-          {Object.entries(translations).map(([key, value]) => (
-            <div key={key} className="mb-2">
-              <label className="block text-sm font-medium">{key}</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={value}
-                  className="flex-1 border px-2 py-1"
-                  onChange={(e) => handleChangeTranslation(key, e.target.value)}
-                />
-                <button
-                  onClick={() => handleDeleteTranslation(key)}
-                  className="bg-red-500 text-white px-3 rounded"
-                >
-                  حذف
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {/* Add New Key */}
-          <div className="mt-4">
-            <h5 className="font-semibold mb-2">افزودن کلید جدید</h5>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                className="border px-2 py-1"
-                placeholder="کلید جدید"
-                value={newKey}
-                onChange={(e) => setNewKey(e.target.value)}
-              />
-              <input
-                type="text"
-                className="border px-2 py-1"
-                placeholder="مقدار"
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-              />
-              <button
-                className="bg-green-600 text-white px-3 rounded"
-                onClick={handleAddKey}
-              >
-                ➕ افزودن
-              </button>
-            </div>
+        <>
+          <div style={{ marginBottom: 10 }}>
+            {renderInputs(translations)}
           </div>
-
-          <button
-            className="bg-blue-700 text-white mt-4 px-4 py-2 rounded"
-            onClick={handleSaveTranslations}
-          >
-            💾 ذخیره ترجمه‌ها
-          </button>
-        </div>
+          <button onClick={handleSave} style={{ marginRight: 10 }}>ذخیره ترجمه‌ها</button>
+          <button onClick={handleExport}>خروجی گرفتن به فایل JSON</button>
+        </>
       ) : (
-        <p className="text-gray-600">لطفاً یک زبان را انتخاب کنید.</p>
+        <p>لطفاً یک زبان را انتخاب کنید.</p>
       )}
     </div>
   );

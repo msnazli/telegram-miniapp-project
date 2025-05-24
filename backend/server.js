@@ -22,5 +22,5 @@ app.use('/api/form', formRoutes);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-const translationRoutes = require('./routes/translationRoutes');
-app.use('/api/translations', require('./routes/translations'));
+const translationsRouter = require('./routes/translations');
+app.use('/api/translations', translationsRouter);
