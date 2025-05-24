@@ -1,42 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 
 const AdminPage = () => {
   const [language, setLanguage] = useState('fa');
-  const [translations, setTranslations] = useState([]);
+  const [translations, setTranslations] = useState({});
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
 
+  // دریافت ترجمه‌ها از سرور برای زبان انتخاب‌شده
   const fetchTranslations = async () => {
-    const res = await axios.get('http://localhost:5000/api/translations');
-    setTranslations(res.data);
+    try {
+      const res = await fetch(`http://localhost:5000/api/translations/${language}`);
+      const data = await res.json();
+      setTranslations(data || {});
+    } catch (err) {
+      console.error('خطا در دریافت ترجمه‌ها', err);
+    }
   };
 
   useEffect(() => {
     fetchTranslations();
-  }, []);
+  }, [language]);
 
-  const handleAdd = async () => {
-    if (!newKey || !newValue) return;
-    await axios.post('http://localhost:5000/api/translations', {
-      key: newKey,
-      value: newValue,
-    });
-    setNewKey('');
-    setNewValue('');
-    fetchTranslations();
-  };
-
-  const handleUpdate = async (id, key, value) => {
-    await axios.put(`http://localhost:5000/api/translations/${id}`, { key, value });
-    fetchTranslations();
-  };
-
-  const handleDelete = async (id) => {
-    await axios.delete(`http://localhost:5000/api/translations/${id}`);
-    fetchTranslations();
-  };
-
+  // ذخیره همه ترجمه‌ها در دیتابیس
   const handleSave = async () => {
     try {
       const res = await fetch(`http://localhost:5000/api/translations/${language}`, {
@@ -44,33 +29,69 @@ const AdminPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(translations),
       });
-      if (res.ok) alert('✅ ذخیره شد');
+      if (res.ok) alert('✅ ترجمه‌ها ذخیره شدند');
     } catch (err) {
-      console.error('Save error', err);
+      console.error('خطا در ذخیره', err);
     }
+  };
+
+  // افزودن کلید جدید
+  const handleAddKey = () => {
+    if (!newKey.trim()) return;
+    setTranslations((prev) => ({
+      ...prev,
+      [newKey]: newValue,
+    }));
+    setNewKey('');
+    setNewValue('');
+  };
+
+  // ویرایش مقدار یک کلید
+  const handleEditKey = (key, value) => {
+    setTranslations((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  // حذف کلید
+  const handleDeleteKey = (key) => {
+    const updated = { ...translations };
+    delete updated[key];
+    setTranslations(updated);
   };
 
   return (
     <div className="container mt-5">
       <h2 className="mb-4">مدیریت ترجمه‌ها</h2>
 
-      <div className="mb-3 d-flex gap-2">
-        <input
-          className="form-control"
-          placeholder="کلید"
-          value={newKey}
-          onChange={(e) => setNewKey(e.target.value)}
-        />
-        <input
-          className="form-control"
-          placeholder="مقدار فارسی یا انگلیسی"
-          value={newValue}
-          onChange={(e) => setNewValue(e.target.value)}
-        />
-        <button className="btn btn-success" onClick={handleAdd}>افزودن</button>
+      <div className="mb-3">
+        <label>انتخاب زبان:</label>
+        <select value={language} onChange={(e) => setLanguage(e.target.value)} className="form-select w-auto d-inline-block ms-2">
+          <option value="fa">فارسی</option>
+          <option value="en">انگلیسی</option>
+        </select>
       </div>
 
-      <table className="table">
+      <div className="mb-4 d-flex gap-2">
+        <input
+          type="text"
+          placeholder="کلید جدید"
+          value={newKey}
+          onChange={(e) => setNewKey(e.target.value)}
+          className="form-control w-25"
+        />
+        <input
+          type="text"
+          placeholder="مقدار"
+          value={newValue}
+          onChange={(e) => setNewValue(e.target.value)}
+          className="form-control w-50"
+        />
+        <button onClick={handleAddKey} className="btn btn-success">افزودن</button>
+      </div>
+
+      <table className="table table-bordered">
         <thead>
           <tr>
             <th>کلید</th>
@@ -79,32 +100,26 @@ const AdminPage = () => {
           </tr>
         </thead>
         <tbody>
-          {translations.map(({ _id, key, value }) => (
-            <tr key={_id}>
+          {Object.entries(translations).map(([key, value]) => (
+            <tr key={key}>
+              <td>{key}</td>
               <td>
                 <input
+                  type="text"
+                  value={value}
+                  onChange={(e) => handleEditKey(key, e.target.value)}
                   className="form-control"
-                  defaultValue={key}
-                  onBlur={(e) => handleUpdate(_id, e.target.value, value)}
                 />
               </td>
               <td>
-                <input
-                  className="form-control"
-                  defaultValue={value}
-                  onBlur={(e) => handleUpdate(_id, key, e.target.value)}
-                />
-              </td>
-              <td>
-                <button className="btn btn-danger" onClick={() => handleDelete(_id)}>حذف</button>
+                <button onClick={() => handleDeleteKey(key)} className="btn btn-danger btn-sm">حذف</button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <button onClick={handleSave}>ذخیره ترجمه‌ها</button>
-      
+      <button onClick={handleSave} className="btn btn-primary">💾 ذخیره</button>
     </div>
   );
 };
