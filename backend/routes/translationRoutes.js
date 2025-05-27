@@ -74,4 +74,11 @@ router.get('/export/:lang', async (req, res) => {
   }
 });
 
+const { authenticate, authorizeAdmin } = require('../middleware/auth');
+
+router.post('/translations', authenticate, authorizeAdmin, async (req, res) => {
+  // کد افزودن زبان
+});
+
+
 module.exports = router;

@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('./bot/telegramBot'); // اجرای بات
 
 const express = require('express');
 const cors = require('cors');
