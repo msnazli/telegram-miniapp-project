@@ -39,7 +39,7 @@ router.post('/telegram-login', async (req, res) => {
       await user.save();
     }
 
-    const token = jwt.sign({ id: user._id, telegramId: user.telegramId, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user._id, telegramId: user.telegramId, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ token });
 
   } catch (err) {
